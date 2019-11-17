@@ -1,0 +1,99 @@
+def version,artifactId,result,msg,commitMSG
+def canaryVersion = "1.0.${env.BUILD_NUMBER}"
+def appLable = 'TRM-Service-Nodejs';
+def devProject = 'payment-dev';
+def stageProject = 'payment-uat';
+def lineToken = 'NGlvw4nSMc78I5rhK1ogl1nX9i1hOh0AYTkmC2MoH81'
+
+def notifyLINE(token, msg) {
+  def url = 'https://notify-api.line.me/api/notify'
+  def message = msg
+  def sticker = "";
+  if(currentBuild.currentResult=="FAILURE")
+    sticker = "-F 'stickerPackageId=1' -F 'stickerId=3'"
+  sh "curl -x http://proxy.true.th:80 ${url} -H 'Authorization: Bearer ${token}' -F 'message=${message}' ${sticker}"
+}
+
+pipeline {
+    agent { label 'nodejs' }
+    stages {
+        stage('Build'){
+            steps {
+                script {
+                    def packageJSON = readJSON file: "package.json"
+                    def packageJSONVersion = packageJSON.version
+                    artifactId = packageJSON.name
+                }
+            }
+        }
+        stage('Build Image') {
+            steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject(devProject) {
+                            def bld = openshift.startBuild("${artifactId}-s2i", "--from-dir=. --env=http_proxy=http://proxy.true.th:80", "--wait");
+                         }  
+                    }
+                }
+            }
+        }
+        stage('Deploy Dev') {
+            steps {
+                script {
+                    openshift.withCluster() {
+                        openshift.withProject(devProject) {
+                            def dc = openshift.selector("dc", artifactId).rollout().latest();
+                        }
+                    }
+                }
+            }
+        }
+        stage('Promote to STAGE?') {
+            steps {
+                script{
+                    commitMSG = sh (
+                        script: 'git log --pretty=format:"%h - %an, %ar : %s" -1',
+                        returnStdout: true
+                    ).trim();
+                }
+                notifyLINE(lineToken, "${env.JOB_NAME}-${env.BUILD_DISPLAY_NAME} \n ${commitMSG} \n ## Ready for Staging !!!. \n Approve at ${env.BUILD_URL} \n (Expire within 10 minutes)")
+                timeout(time:15, unit:'MINUTES') {
+                    input message: "Promote to STAGE?", ok: "Promote"
+                }
+                script {
+                    openshift.withCluster() {
+                        openshift.tag("${devProject}/${artifactId}:latest", "${stageProject}/${artifactId}:${canaryVersion}")
+                        openshift.tag("${stageProject}/${artifactId}:${canaryVersion}", "${stageProject}/${artifactId}:latest")
+                    }
+                }
+            }
+        }
+        stage('Deploy STAGE'){
+            steps {
+                script{
+                    openshift.withCluster(){
+                        openshift.withProject(stageProject){
+                            if(openshift.selector('dc', artifactId).exists()){
+                                openshift.selector("dc", artifactId).rollout().latest();
+                            }else{
+                                def app = openshift.newApp("${artifactId}:latest").narrow("svc").expose()
+                                openshift.set("env", "dc/${artifactId}", "FASTIFY_PORT=8080 --overwrite")
+                                openshift.set("env", "dc/${artifactId}", "YARN_ENABLED=true --overwrite")
+                                openshift.set("env", "dc/${artifactId}", "BASE_URL=/${artifactId}/serv/docs --overwrite")
+                                // openshift.set("env", "dc/${artifactId}", "https_proxy= --overwrite")
+                                // openshift.set("env", "dc/${artifactId}", "HTTPS_PROXY= --overwrite")
+                                // openshift.set("env", "dc/${artifactId}", "TZ=Asia/Bangkok --overwrite")
+                                openshift.selector("dc/${artifactId}").label([ app: appLable], "--overwrite")
+                            }
+                                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            notifyLINE(lineToken, "${env.JOB_NAME}-${env.BUILD_DISPLAY_NAME} ## ${currentBuild.currentResult} \n see also : ${env.BUILD_URL}")
+        }
+    }
+}  
