@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import queryString from "query-string";
 import io from "socket.io-client";
-import { InfoBar, Input, Messages } from "./";
+import { InfoBar, Input, Messages } from "../components";
 let socket;
 
 const Chat = ({ location }) => {
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
   const [message, setMessage] = useState("");
+
   const [messages, setMessages] = useState([]);
   const ENDPOINT = "localhost:8080";
 
@@ -29,6 +30,7 @@ const Chat = ({ location }) => {
   useEffect(() => {
     socket.on("message", message => {
       setMessages([...messages, message]);
+      console.log(message)
     });
 
   

@@ -1,7 +1,9 @@
+import faker from 'faker';
+
 const users = [];
 
 const addUser = item => {
-  console.log('item', item);
+  const image = faker.image.avatar();
   let { id, name, room } = item;
   name = name.trim().toLowerCase();
   room = room.trim().toLowerCase();
@@ -14,7 +16,7 @@ const addUser = item => {
     return { error: 'Username is already taken' };
   }
 
-  const user = { id, name, room };
+  const user = { id, name, room, image };
   users.push(user);
   return { user };
 };
@@ -27,6 +29,5 @@ const removeUser = id => {
 };
 
 const getUser = id => users.find(user => user.id === id);
-
 
 export { addUser, removeUser, getUser };

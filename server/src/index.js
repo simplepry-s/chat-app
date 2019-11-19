@@ -7,6 +7,8 @@ import { addUser, removeUser, getUser } from './socket/users';
 import { authentication } from './middleware';
 import router from './router';
 import config from './config';
+import faker from 'faker';
+const image = faker.image.avatar();
 
 const app = express();
 const base = '/api';
@@ -25,12 +27,15 @@ io.on('connection', socket => {
 
     socket.emit('message', {
       user: 'admin',
-      text: `${user.name} welcome to the room ${user.room}`
+      text: `${user.name} welcome to the room ${user.room}`,
+      image: image
     });
 
-    socket.broadcast
-      .to(user.room)
-      .emit('message', { user: 'admin', text: `${user.name} has join` });
+    socket.broadcast.to(user.room).emit('message', {
+      user: 'admin',
+      text: `${user.name} has join`,
+      image: image
+    });
     socket.join(user.room);
 
     callback();
@@ -38,7 +43,11 @@ io.on('connection', socket => {
 
   socket.on('sendMessage', (message, callback) => {
     const user = getUser(socket.id);
-    io.to(user.room).emit('message', { user: user.name, text: message });
+    io.to(user.room).emit('message', {
+      user: user.name,
+      text: message,
+      image: user.image
+    });
 
     callback();
   });
@@ -49,7 +58,8 @@ io.on('connection', socket => {
     if (user) {
       io.to(user.room).emit('message', {
         user: 'admin',
-        text: `${user.name} has left.`
+        text: `${user.name} has left.`,
+        image: user.image
       });
     }
   });
