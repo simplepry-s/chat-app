@@ -1,4 +1,4 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+SIMPLE REACT CHAT APP WITH SOCKET.io
 
 ## Available Scripts
 
