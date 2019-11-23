@@ -1,4 +1,5 @@
 import React from "react";
+import PropsTypes from "prop-types";
 
 const Message = props => {
   const {
@@ -32,4 +33,12 @@ const Message = props => {
   );
 };
 
+Message.propsTypes = {
+  messages: PropsTypes.shape({
+    user: PropsTypes.string.isRequired,
+    text: PropsTypes.string.isRequired,
+    image: PropsTypes.string.isRequired
+  }),
+  name: PropsTypes.string.isRequired
+};
 export default Message;

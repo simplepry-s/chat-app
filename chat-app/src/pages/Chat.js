@@ -4,7 +4,8 @@ import io from "socket.io-client";
 import { InfoBar, Input, Messages } from "../components";
 let socket;
 
-const Chat = ({ location }) => {
+const Chat = props => {
+  const { location } = props;
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
   const [message, setMessage] = useState("");
@@ -30,10 +31,8 @@ const Chat = ({ location }) => {
   useEffect(() => {
     socket.on("message", message => {
       setMessages([...messages, message]);
-      console.log(message)
+      console.log(message);
     });
-
-  
 
     return () => {
       socket.emit("disconnect");

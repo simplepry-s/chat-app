@@ -1,4 +1,5 @@
 import React from "react";
+import PropsTypes from "prop-types";
 
 const Input = props => {
   const { setMessage, sendMessage, message } = props;
@@ -20,6 +21,12 @@ const Input = props => {
       </button>
     </form>
   );
+};
+
+Input.propsTypes = {
+  setMessage: PropsTypes.func.isRequired,
+  sendMessage: PropsTypes.func.isRequired,
+  message: PropsTypes.string.isRequired
 };
 
 export default Input;
